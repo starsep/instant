@@ -1,3 +1,7 @@
+BINARY=test hello use_atoi
+
+all: ${BINARY}
+	
 %.bc: %.ll
 	llvm-as -o $@ $^
 
@@ -9,8 +13,6 @@
 
 %-runtime.bc: %.bc runtime.bc
 	llvm-link -o $@ $^
-
-BINARY=test hello
 
 ${BINARY}: %: %.s
 	gcc -o $@ $^
