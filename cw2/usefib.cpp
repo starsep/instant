@@ -1,6 +1,6 @@
 #include <cstdio>
 
-extern int fib(int n);
+int fib(int n);
 
 int main() {
   int n;
