@@ -9,7 +9,7 @@ all: ${BINARY}
 	llc -o $@ -march=x86-64 $^
 
 %.ll: %.cpp
-	clang++ -o $@ -O0 -S -emit-llvm $<
+	clang++ -march=x86-64 -o $@ -O0 -S -emit-llvm $<
 
 %-runtime.bc: %.bc runtime.bc
 	llvm-link -o $@ $^

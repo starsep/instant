@@ -1,0 +1,11 @@
+*.tgz
+*.tar.gz
+*.x
+*.y
+out
+*.bc
+*.ll
+*.class
+*.j
+*.o
+*.hi
