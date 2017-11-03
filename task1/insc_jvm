@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-export DEPENDENCY="lib/jasmin.jar"
+export DEPENDENCIES="lib/jasmin.jar"
 JAVA="java"
 export LANG="jvm"
 export VM_BINARIES="$JAVA"

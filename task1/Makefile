@@ -18,18 +18,24 @@ BNFC_SOURCES_FILES=AbsInstant.hs ErrM.hs LexInstant.hs \
 	ParInstant.hs PrintInstant.hs TestInstant.hs
 BNFC_SOURCES=$(addprefix $(BUILD)/,$(BNFC_SOURCES_FILES))
 
-.PHONY: all clean pack test
+.PHONY: all clean pack test testPrepare testAll
 
 all: $(BINARIES)
 
-test: all $(INSTESTER) pack
-	mkdir -p $(TEST_DIR) && \
-	mv $(PACK_NAME) $(TEST_DIR) && \
-	ln -sfr $(INSTESTER) $(TEST_DIR)/instester && \
-	cp -r test/examples $(TEST_DIR) && \
+test: testPrepare
+	cd $(TEST_DIR) && \
+	./instester . "examples/"
+
+testAll: testPrepare
 	ln -sfr test/mrjp_instant_gen/examples/* $(TEST_DIR)/examples && \
 	cd $(TEST_DIR) && \
 	./instester . "examples/"
+
+testPrepare: $(INSTESTER) pack
+	mkdir -p $(TEST_DIR) && \
+	mv $(PACK_NAME) $(TEST_DIR) && \
+	ln -sfr $(INSTESTER) $(TEST_DIR)/instester && \
+	cp -r test/examples $(TEST_DIR)
 
 $(INSTESTER):
 	cd "$(INSTESTER_DIR)" && \
@@ -60,4 +66,4 @@ shellcheck:
 	shellcheck $(SHELL_SCRIPTS)
 
 clean:
-	rm -rf $(BUILD) $(TMP) $(BINARIES) $(TEST_DIR) *.tgz
+	rm -rf $(BUILD) $(TMP) $(BINARIES) $(TEST_DIR) *.tgz 

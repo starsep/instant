@@ -19,10 +19,12 @@ if [[ ! -f $COMPILER ]]; then
     exit 1
 fi
 
-if [[ ! -f $DEPENDENCY ]]; then
-    echo "Couldn't find '$DEPENDENCY'."
-    exit 1
-fi
+for DEPENDENCY in $DEPENDENCIES; do
+    if [[ ! -f $DEPENDENCY ]]; then
+        echo "Couldn't find '$DEPENDENCY'."
+        exit 1
+    fi
+done
 
 for VM_BINARY in $VM_BINARIES ; do
     if ! command -v "$VM_BINARY" &> /dev/null; then

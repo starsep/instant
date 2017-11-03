@@ -42,17 +42,10 @@ instance Show JVMInstruction where
       "iload " ++ show x
   show Swap = "swap"
 
-type JVMEnv = ()
 type JVMResult = [JVMInstruction]
 type Loc = Int
 type JVMState = (Map Ident Loc, Loc)
-type JVMMonad = RWS JVMEnv JVMResult JVMState ()
-
-initEnv :: JVMEnv
-initEnv = ()
-
-initState :: JVMState
-initState = (Map.empty, 1)
+type JVMMonad = RWS () JVMResult JVMState ()
 
 indentLine :: String -> String
 indentLine "" = "\n"
@@ -149,7 +142,8 @@ footer = indent [
 
 runCompiler :: Program -> (Loc, JVMResult)
 runCompiler prog =
-  let (_, (_, locals), result) = runRWS (transProgram prog) initEnv initState in
+  let initState = (Map.empty, 1)
+      (_, (_, locals), result) = runRWS (transProgram prog) () initState in
   (locals, result)
 
 compile :: String -> Program -> String
@@ -161,5 +155,3 @@ compile className prog =
   indentLine (".limit locals " ++ show locals) ++
   code ++
   footer
-
----------
