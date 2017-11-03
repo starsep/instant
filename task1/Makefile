@@ -26,7 +26,8 @@ test: all $(INSTESTER) pack
 	mkdir -p $(TEST_DIR) && \
 	mv $(PACK_NAME) $(TEST_DIR) && \
 	ln -sfr $(INSTESTER) $(TEST_DIR)/instester && \
-	ln -sfr test/examples $(TEST_DIR) && \
+	cp -r test/examples $(TEST_DIR) && \
+	ln -sfr test/mrjp_instant_gen/examples/* $(TEST_DIR)/examples && \
 	cd $(TEST_DIR) && \
 	./instester . "examples/"
 

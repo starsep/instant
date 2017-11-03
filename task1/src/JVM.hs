@@ -21,9 +21,10 @@ instance Show JVMInstruction where
   show GetPrintStream = "getstatic java/lang/System/out Ljava/io/PrintStream;"
   show PrintInt = "invokevirtual java/io/PrintStream/println(I)V"
   show (PushConst x)
-    | x == -1 = "iconst_m1"
-    | x `elem` [0..5] = "iconst_" ++ show x
-    | otherwise = "bipush " ++ show x
+    | x <= 5 = "iconst_" ++ show x
+    | x <= 127 = "bipush " ++ show x
+    | x <= 32767 = "sipush " ++ show x
+    | otherwise = "ldc " ++ show x
   show Add = "iadd"
   show Sub = "isub"
   show Mul = "imul"
