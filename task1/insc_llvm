@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+export DEPENDENCY="lib/runtime.bc"
+export LANG="llvm"
+LLVM_AS="llvm-as"
+LLVM_LINK="llvm-link"
+export VM_BINARIES="$LLVM_AS $LLVM_LINK"
+
+source usage.sh
+
+OUTPUT=${SOURCE%.ins}.ll
+BYTECODE=${SOURCE%.ins}.bc
+
+"$COMPILER" "$LANG" "$SOURCE" > "$OUTPUT"
+"$LLVM_AS" "$OUTPUT" -o "$BYTECODE"
+"$LLVM_LINK" "$BYTECODE" "$DEPENDENCY" -o "$BYTECODE"

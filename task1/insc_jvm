@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+export DEPENDENCY="lib/jasmin.jar"
+JAVA="java"
+export LANG="jvm"
+export VM_BINARIES="$JAVA"
+
+source usage.sh
+
+OUTPUT=${SOURCE%.ins}.j
+OUTPUT_DIR=$(dirname "$OUTPUT")
+
+"$COMPILER" "$LANG" "$SOURCE" > "$OUTPUT"
+# "$JAVA" -jar "$DEPENDENCY" -d "$OUTPUT_DIR" "$OUTPUT" > /dev/null
+jasmin -d "$OUTPUT_DIR" "$OUTPUT" > /dev/null

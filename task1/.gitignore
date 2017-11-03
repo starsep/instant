@@ -9,3 +9,8 @@ out
 *.j
 *.o
 *.hi
+build
+Compiler
+TestInstant
+dist
+testing
