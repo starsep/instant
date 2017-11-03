@@ -15,7 +15,8 @@ data JVMInstruction =
   Mul |
   Div |
   Store Loc |
-  Load Loc
+  Load Loc |
+  Swap
 
 instance Show JVMInstruction where
   show GetPrintStream = "getstatic java/lang/System/out Ljava/io/PrintStream;"
@@ -39,6 +40,7 @@ instance Show JVMInstruction where
       "iload_" ++ show x
     else
       "iload " ++ show x
+  show Swap = "swap"
 
 type JVMEnv = ()
 type JVMResult = [JVMInstruction]
@@ -71,6 +73,7 @@ stackModifier ins = case ins of
   Div -> -1
   Store _ -> -1
   Load _ -> 1
+  Swap -> 0
 
 maxStack :: [JVMInstruction] -> Int
 maxStack ins = maxStack' ins 0
@@ -112,11 +115,9 @@ transStmt x = case x of
       put (Map.insert ident nextLoc state, nextLoc + 1)
     (state', _) <- get
     tell [Store $ state' ! ident]
-    return ()
   SExp expr -> do
-    tell [GetPrintStream]
     transExp expr
-    tell [PrintInt]
+    tell [GetPrintStream, Swap, PrintInt]
 
 transExp :: Exp -> JVMMonad
 transExp x = case x of
