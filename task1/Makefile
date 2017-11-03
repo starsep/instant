@@ -5,7 +5,7 @@ GHC=ghc
 TMP=tmp
 INSTESTER_DIR=./test/instester
 INSTESTER=$(INSTESTER_DIR)/dist/build/instester/instester
-TEST_DIR=testing
+TEST_DIR=$(BUILD)/test
 
 SHELL_SCRIPTS=insc_jvm insc_llvm usage.sh
 FILES_TO_PACK=$(SHELL_SCRIPTS) src lib Makefile
@@ -18,7 +18,7 @@ BNFC_SOURCES_FILES=AbsInstant.hs ErrM.hs LexInstant.hs \
 	ParInstant.hs PrintInstant.hs TestInstant.hs
 BNFC_SOURCES=$(addprefix $(BUILD)/,$(BNFC_SOURCES_FILES))
 
-.PHONY: all clean pack test 
+.PHONY: all clean pack test
 
 all: $(BINARIES)
 
@@ -32,13 +32,13 @@ test: all $(INSTESTER) pack
 
 $(INSTESTER):
 	cd "$(INSTESTER_DIR)" && \
-	cabal update && \
 	cabal install shelly && \
+	cabal configure && \
 	cabal build
 
 $(BINARIES): %: $(BNFC_SOURCES) $(LINKED_SOURCES)
 	cd $(BUILD) && \
-	$(GHC) --make $@.hs -o ../$@
+	$(GHC) $(GHCFLAGS) --make $@.hs -o ../$@
 
 $(LINKED_SOURCES): $(BUILD)/%: src/%
 	ln -srf $^ $(BUILD)

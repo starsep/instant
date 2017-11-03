@@ -11,5 +11,4 @@ OUTPUT=${SOURCE%.ins}.j
 OUTPUT_DIR=$(dirname "$OUTPUT")
 
 "$COMPILER" "$LANG" "$SOURCE" > "$OUTPUT"
-# "$JAVA" -jar "$DEPENDENCY" -d "$OUTPUT_DIR" "$OUTPUT" > /dev/null
-jasmin -d "$OUTPUT_DIR" "$OUTPUT" > /dev/null
+"$JAVA" -cp "$DEPENDENCY" jasmin.Main -d "$OUTPUT_DIR" "$OUTPUT" > /dev/null

@@ -4,11 +4,17 @@ import ParInstant
 import AbsInstant
 import ErrM
 import System.Environment (getArgs)
-import System.Exit (die)
+import System.FilePath.Posix (takeBaseName)
 import Control.Monad
 import qualified JVM
 import qualified LLVM
-import System.IO (openFile, IOMode(ReadMode), hGetContents)
+import System.Exit (exitFailure)
+import System.IO (openFile, IOMode(ReadMode), hGetContents, hPutStrLn, stderr)
+
+-- import System.Exit (die)
+-- doesn't work on ghc 7.6.3
+die :: String -> IO ()
+die err = hPutStrLn stderr err >> exitFailure
 
 binaryName :: String
 binaryName = "./Compiler"
@@ -30,10 +36,10 @@ readSource filename = do
     file <- openFile filename ReadMode
     hGetContents file
 
-compiler :: String -> (Program -> String)
-compiler lang =
+compiler :: String -> String -> (Program -> String)
+compiler lang basename =
     if lang == "jvm" then
-        JVM.compile
+        JVM.compile basename
     else
         LLVM.compile
 
@@ -41,8 +47,11 @@ main :: IO ()
 main = do
     [lang, filename] <- parseArgs
     checkLang lang
+    let basename = takeBaseName filename
     source <- readSource filename
     program <- case pProgram (myLexer source) of
         Ok p -> return p
-        Bad msg -> die "Lexing failed"
-    putStrLn $ compiler lang program
+        Bad msg -> do
+          die $ "Lexing failed: " ++ show msg
+          return $ Prog []
+    putStrLn $ compiler lang basename program
