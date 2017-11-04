@@ -1,0 +1,57 @@
+Filip Czaplicki <fc359081@students.mimuw.edu.pl>
+
+# Kompilacja
+Program kompliluje się po wykonaniu `make`.
+Za pomocą `bnfc`, `happy` oraz `alex` generowane jest z
+gramatyki część źródeł.
+Napisany przeze mnie kod wraz z wygenerowanym kompilowany
+jest przez `ghc`.
+W korzeniu projektu powstaje binarka `Compiler`.
+
+# Uruchamianie programu
+Program `Compiler` przyjmuje jako parametry:
+- język do jakiego skompilować (`jvm` lub `llvm`)
+- ściężkę do pliku źródłowego
+- (opcjonalnie) flagę `-O0` (słownie: minus o zero),
+  która wyłącza optymalizacje
+
+Wynik wypisuje na standardowe wyjście.
+
+Napisałem także dwa skrypty bashowe
+odpalające `Compiler`: `insc_jvm` oraz `insc_llvm`.
+Działają one zgodnie ze specyfikacją zadania.
+Wspólny kod tych skryptów jest w `usage.sh`.
+
+# Narzędzia i biblioteki
+- BNFC
+- Haskell oraz jego standardowa biblioteka
+- Jasmin
+- wykorzystałem część `runtime.ll` w `src/LLVM.hs` 
+
+# Struktura projektu
+- src
+    * Compiler.hs - główny plik kompilatora, obsługa IO, argumentów itp.
+    * JVM.hs - implementacja JVMa wraz z optymalizacjami
+    * LLVM.hs - implementacja LLVMa
+    * Instant.cf - gramatyka języka
+- lib
+    * jasmin.jar - używany do generowania `.class` z `.j`
+- `insc_jvm`
+- `insc_llvm`
+- usage.sh
+- Makefile
+- README
+
+# Optymalizacje dla JVMa
+Będę używać notacji z `src/JVM.hs`.
+
+1. Zamieniam ciąg instrukcji (o ile zmniejszy to limit stosu):  
+z [*GetPrintStream*, ..., *PrintInt*]  
+na [..., *GetPrintStream*, *Swap*, *PrintInt*]  
+
+2. Druga optymalizacja polega na zmianie kolejności obliczania
+argumentów operacji przemiennych - dodawania oraz mnożenia.
+Moja implementacja ma złożoność wykładniczą, więc ograniczam
+głębokość optymalizacji przez stałą **maxOptimizeDepth** w `src/JVM.hs`.
+Liczę maksymalne wysokości stosów podczas obliczania obu argumentów i
+zamieniam kolejność jeżeli prawy argument ma większą wysokość stosu.
