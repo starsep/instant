@@ -45,7 +45,7 @@ instance Show JVMInstruction where
 type JVMResult = [JVMInstruction]
 type Loc = Int
 type JVMState = (Map Ident Loc, Loc)
-type JVMMonad = RWS Bool JVMResult JVMState ()
+type JVMMonad = RWS Int JVMResult JVMState ()
 
 indentLine :: String -> String
 indentLine "" = "\n"
@@ -116,14 +116,16 @@ transStmt x = case x of
 optimizeCommutative :: JVMInstruction -> Exp -> Exp -> JVMMonad
 optimizeCommutative ins exp1 exp2 = do
   state <- get
-  let (_, _, left) = runRWS (transExp exp1) True state
-      (_, _, right) = runRWS (transExp exp2) True state
+  optimizeDepth <- ask
+  let (_, _, left) = runRWS (transExp exp1) (optimizeDepth - 1) state
+      (_, _, right) = runRWS (transExp exp2) (optimizeDepth - 1) state
       stackLeft = maxStack left
       stackRight = maxStack right
-  if stackRight > stackLeft then
-    local (const False) (standardTransBinExp ins exp2 exp1)
-  else
-    standardTransBinExp ins exp1 exp2
+  local (\x -> x - 1) $
+    if stackRight > stackLeft then
+      standardTransBinExp ins exp2 exp1
+    else
+      standardTransBinExp ins exp1 exp2
 
 isCommutative :: JVMInstruction -> Bool
 isCommutative Add = True
@@ -139,7 +141,7 @@ standardTransBinExp ins exp1 exp2 = do
 transBinExp :: JVMInstruction -> Exp -> Exp -> JVMMonad
 transBinExp ins exp1 exp2 = do
   optimize <- ask
-  if optimize && isCommutative ins then
+  if optimize > 0 && isCommutative ins then
     optimizeCommutative ins exp1 exp2
   else
     standardTransBinExp ins exp1 exp2
@@ -165,11 +167,15 @@ limits result locals = [
   ".limit stack " ++ show (maxStack result),
   ".limit locals " ++ show locals]
 
+maxOptimizeDepth :: Int
+maxOptimizeDepth = 10
+
 runCompiler :: Program -> Bool -> (Loc, JVMResult)
 runCompiler prog optimize =
   let initState = (Map.empty, 1)
+      initEnv = if optimize then maxOptimizeDepth else 0
       (_, (_, locals), result) =
-        runRWS (transProgram prog) optimize initState in
+        runRWS (transProgram prog) initEnv initState in
   (locals, result)
 
 isCalculation :: JVMInstruction -> Bool
