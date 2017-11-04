@@ -2,7 +2,7 @@ module JVM (compile) where
 
 import AbsInstant
 import Control.Monad
-import Control.Monad.RWS (RWS, get, tell, put, runRWS)
+import Control.Monad.RWS (RWS, ask, get, local, tell, put, runRWS)
 import Data.Map (Map, (!))
 import qualified Data.Map as Map
 
@@ -45,7 +45,7 @@ instance Show JVMInstruction where
 type JVMResult = [JVMInstruction]
 type Loc = Int
 type JVMState = (Map Ident Loc, Loc)
-type JVMMonad = RWS () JVMResult JVMState ()
+type JVMMonad = RWS Bool JVMResult JVMState ()
 
 indentLine :: String -> String
 indentLine "" = "\n"
@@ -113,11 +113,36 @@ transStmt x = case x of
     transExp expr
     tell [PrintInt]
 
-transBinExp :: JVMInstruction -> Exp -> Exp -> JVMMonad
-transBinExp ins exp1 exp2 = do
+optimizeCommutative :: JVMInstruction -> Exp -> Exp -> JVMMonad
+optimizeCommutative ins exp1 exp2 = do
+  state <- get
+  let (_, _, left) = runRWS (transExp exp1) True state
+      (_, _, right) = runRWS (transExp exp2) True state
+      stackLeft = maxStack left
+      stackRight = maxStack right
+  if stackRight > stackLeft then
+    local (const False) (standardTransBinExp ins exp2 exp1)
+  else
+    standardTransBinExp ins exp1 exp2
+
+isCommutative :: JVMInstruction -> Bool
+isCommutative Add = True
+isCommutative Mul = True
+isCommutative _ = False
+
+standardTransBinExp :: JVMInstruction -> Exp -> Exp -> JVMMonad
+standardTransBinExp ins exp1 exp2 = do
   transExp exp1
   transExp exp2
   tell [ins]
+
+transBinExp :: JVMInstruction -> Exp -> Exp -> JVMMonad
+transBinExp ins exp1 exp2 = do
+  optimize <- ask
+  if optimize && isCommutative ins then
+    optimizeCommutative ins exp1 exp2
+  else
+    standardTransBinExp ins exp1 exp2
 
 transExp :: Exp -> JVMMonad
 transExp x = case x of
@@ -140,10 +165,11 @@ limits result locals = [
   ".limit stack " ++ show (maxStack result),
   ".limit locals " ++ show locals]
 
-runCompiler :: Program -> (Loc, JVMResult)
-runCompiler prog =
+runCompiler :: Program -> Bool -> (Loc, JVMResult)
+runCompiler prog optimize =
   let initState = (Map.empty, 1)
-      (_, (_, locals), result) = runRWS (transProgram prog) () initState in
+      (_, (_, locals), result) =
+        runRWS (transProgram prog) optimize initState in
   (locals, result)
 
 isCalculation :: JVMInstruction -> Bool
@@ -195,14 +221,14 @@ optimizeGetPrintSwap' prefix (i:is) = optimizeGetPrintSwap' (prefix ++ [i]) is
 optimizeGetPrintSwap :: JVMResult -> JVMResult
 optimizeGetPrintSwap = optimizeGetPrintSwap' []
 
-optimize :: JVMResult -> JVMResult
-optimize ins =
-  optimizeGetPrintSwap ins
-
 compile :: Bool -> String -> Program -> String
-compile optimizeOn className prog =
-  let (locals, notOptimized) = runCompiler prog
-      result = if optimizeOn then optimize notOptimized else notOptimized
+compile optimize className prog =
+  let (locals, notOptimized) = runCompiler prog optimize
+      result =
+        if optimize then
+          optimizeGetPrintSwap notOptimized
+        else
+          notOptimized
       code = foldr ((:) . show) [] result in
   indent (
     header className ++
