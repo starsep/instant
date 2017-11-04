@@ -75,24 +75,24 @@ maxStack' :: [JVMInstruction] -> Int -> Int
 maxStack' [] acc = acc
 maxStack' (i:is) acc = max acc (maxStack' is (acc + stackModifier i))
 
-defaultCtor :: String
-defaultCtor = indent [
+defaultCtor :: [String]
+defaultCtor = [
   ".method public <init>()V",
   "aload_0",
   "invokespecial java/lang/Object/<init>()V",
   "return",
   ".end method"]
 
-classHeader :: String -> String
-classHeader className = indent [
+classHeader :: String -> [String]
+classHeader className = [
   ".class public " ++ className,
   ".super java/lang/Object",
   ""] ++
   defaultCtor
 
-header :: String -> String
+header :: String -> [String]
 header className =
-  classHeader className ++ indent [ "",
+  classHeader className ++ [ "",
   ".method public static main([Ljava/lang/String;)V"]
 
 transProgram :: Program -> JVMMonad
@@ -112,33 +112,32 @@ transStmt x = case x of
     transExp expr
     tell [GetPrintStream, Swap, PrintInt]
 
+transBinExp :: JVMInstruction -> Exp -> Exp -> JVMMonad
+transBinExp ins exp1 exp2 = do
+  transExp exp1
+  transExp exp2
+  tell [ins]
+
 transExp :: Exp -> JVMMonad
 transExp x = case x of
-  ExpAdd exp1 exp2 -> do
-    transExp exp1
-    transExp exp2
-    tell [Add]
-  ExpSub exp1 exp2 -> do
-    transExp exp1
-    transExp exp2
-    tell [Sub]
-  ExpMul exp1 exp2 -> do
-    transExp exp1
-    transExp exp2
-    tell [Mul]
-  ExpDiv exp1 exp2 -> do
-    transExp exp1
-    transExp exp2
-    tell [Div]
+  ExpAdd exp1 exp2 -> transBinExp Add exp1 exp2
+  ExpSub exp1 exp2 -> transBinExp Sub exp1 exp2
+  ExpMul exp1 exp2 -> transBinExp Mul exp1 exp2
+  ExpDiv exp1 exp2 -> transBinExp Div exp1 exp2
   ExpLit integer -> tell [PushConst integer]
   ExpVar ident -> do
     (state, _) <- get
     tell [Load $ state ! ident]
 
-footer :: String
-footer = indent [
+footer :: [String]
+footer = [
   "return",
   ".end method"]
+
+limits :: JVMResult -> Int -> [String]
+limits result locals = [
+  ".limit stack " ++ show (maxStack result),
+  ".limit locals " ++ show locals]
 
 runCompiler :: Program -> (Loc, JVMResult)
 runCompiler prog =
@@ -149,9 +148,9 @@ runCompiler prog =
 compile :: String -> Program -> String
 compile className prog =
   let (locals, result) = runCompiler prog
-      code = foldr ((++) . indentLine . show) "" result in
-  header className ++
-  indentLine (".limit stack " ++ show (maxStack result)) ++
-  indentLine (".limit locals " ++ show locals) ++
-  code ++
-  footer
+      code = foldr ((:) . show) [] result in
+  indent (
+    header className ++
+    limits result locals ++
+    code ++
+    footer)

@@ -3,7 +3,7 @@ module Main (main) where
 import ParInstant
 import AbsInstant
 import ErrM
-import System.Environment (getArgs)
+import System.Environment (getArgs, getExecutablePath)
 import System.FilePath.Posix (takeBaseName)
 import Control.Monad
 import qualified JVM
@@ -16,14 +16,12 @@ import System.IO (openFile, IOMode(ReadMode), hGetContents, hPutStrLn, stderr)
 die :: String -> IO ()
 die err = hPutStrLn stderr err >> exitFailure
 
-binaryName :: String
-binaryName = "./Compiler"
-
 parseArgs :: IO [String]
 parseArgs = do
     args <- getArgs
+    path <- getExecutablePath
     when (length args /= 2) $
-        die $ "Usage: " ++ binaryName ++ " LANG SOURCE"
+        die $ "Usage: " ++ path ++ " LANG SOURCE"
     return args
 
 checkLang :: String -> IO ()
@@ -36,7 +34,7 @@ readSource filename = do
     file <- openFile filename ReadMode
     hGetContents file
 
-compiler :: String -> String -> (Program -> String)
+compiler :: String -> String -> Program -> String
 compiler lang basename =
     if lang == "jvm" then
         JVM.compile basename

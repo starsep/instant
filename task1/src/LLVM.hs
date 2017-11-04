@@ -20,7 +20,7 @@ data LLVMInstruction =
   Div Loc Loc Loc |
   Store Loc Integer
 
-showTwoArgs :: String -> Loc -> Loc-> Loc -> String
+showTwoArgs :: String -> Loc -> Loc -> Loc -> String
 showTwoArgs op r x y =
   "%_" ++ show r ++ " = " ++ op ++ " i32 %_" ++ show x ++ ", %_" ++ show y
 
@@ -83,31 +83,23 @@ newLoc = do
   put (q, result + 1)
   return result
 
-transExpHelper :: Exp -> Exp -> LLVMMonad (Loc, Loc, Loc)
-transExpHelper exp1 exp2 = do
+
+type LLVMBinInstruction = Loc -> Loc -> Loc -> LLVMInstruction
+
+transBinExp :: LLVMBinInstruction -> Exp -> Exp -> LLVMMonad Loc
+transBinExp ins exp1 exp2 = do
   x <- transExp exp1
   y <- transExp exp2
   r <- newLoc
-  return (r, x, y)
+  tell [ins r x y]
+  return r
 
 transExp :: Exp -> LLVMMonad Loc
 transExp e = case e of
-  ExpAdd exp1 exp2 -> do
-    (r, x, y) <- transExpHelper exp1 exp2
-    tell [Add r x y]
-    return r
-  ExpSub exp1 exp2 -> do
-    (r, x, y) <- transExpHelper exp1 exp2
-    tell [Sub r x y]
-    return r
-  ExpMul exp1 exp2 -> do
-    (r, x, y) <- transExpHelper exp1 exp2
-    tell [Mul r x y]
-    return r
-  ExpDiv exp1 exp2 -> do
-    (r, x, y) <- transExpHelper exp1 exp2
-    tell [Div r x y]
-    return r
+  ExpAdd exp1 exp2 -> transBinExp Add exp1 exp2
+  ExpSub exp1 exp2 -> transBinExp Sub exp1 exp2
+  ExpMul exp1 exp2 -> transBinExp Mul exp1 exp2
+  ExpDiv exp1 exp2 -> transBinExp Div exp1 exp2
   ExpLit integer -> do
     r <- newLoc
     tell [Store r integer]
