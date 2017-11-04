@@ -1,28 +1,35 @@
 module Main (main) where
 
+import Control.Monad
+import Data.List (isPrefixOf, partition)
+import System.Exit (exitFailure)
+import System.Environment (getArgs, getExecutablePath)
+import System.FilePath.Posix (takeBaseName)
+import System.IO (openFile, IOMode(ReadMode), hGetContents, hPutStrLn, stderr)
 import ParInstant
 import AbsInstant
 import ErrM
-import System.Environment (getArgs, getExecutablePath)
-import System.FilePath.Posix (takeBaseName)
-import Control.Monad
 import qualified JVM
 import qualified LLVM
-import System.Exit (exitFailure)
-import System.IO (openFile, IOMode(ReadMode), hGetContents, hPutStrLn, stderr)
 
 -- import System.Exit (die)
 -- doesn't work on ghc 7.6.3
 die :: String -> IO ()
 die err = hPutStrLn stderr err >> exitFailure
 
-parseArgs :: IO [String]
+parseFlags :: [String] -> (Bool, [String])
+parseFlags argsWithFlags =
+  let (flags, args) = partition (\x -> "-" `isPrefixOf` x) argsWithFlags in
+  ("-O0" `notElem` flags, args)
+
+parseArgs :: IO (Bool, [String])
 parseArgs = do
-    args <- getArgs
+    argsWithFlags <- getArgs
+    let (optimizeOn, args) = parseFlags argsWithFlags
     path <- getExecutablePath
     when (length args /= 2) $
         die $ "Usage: " ++ path ++ " LANG SOURCE"
-    return args
+    return (optimizeOn, args)
 
 checkLang :: String -> IO ()
 checkLang lang =
@@ -34,16 +41,16 @@ readSource filename = do
     file <- openFile filename ReadMode
     hGetContents file
 
-compiler :: String -> String -> Program -> String
-compiler lang basename =
+compiler :: Bool -> String -> String -> Program -> String
+compiler optimizeOn lang basename =
     if lang == "jvm" then
-        JVM.compile basename
+        JVM.compile optimizeOn basename
     else
         LLVM.compile
 
 main :: IO ()
 main = do
-    [lang, filename] <- parseArgs
+    (optimizeOn, [lang, filename]) <- parseArgs
     checkLang lang
     let basename = takeBaseName filename
     source <- readSource filename
@@ -52,4 +59,4 @@ main = do
         Bad msg -> do
           die $ "Lexing failed: " ++ show msg
           return $ Prog []
-    putStrLn $ compiler lang basename program
+    putStrLn $ compiler optimizeOn lang basename program

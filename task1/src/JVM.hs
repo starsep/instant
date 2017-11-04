@@ -109,8 +109,9 @@ transStmt x = case x of
     (state', _) <- get
     tell [Store $ state' ! ident]
   SExp expr -> do
+    tell [GetPrintStream]
     transExp expr
-    tell [GetPrintStream, Swap, PrintInt]
+    tell [PrintInt]
 
 transBinExp :: JVMInstruction -> Exp -> Exp -> JVMMonad
 transBinExp ins exp1 exp2 = do
@@ -145,9 +146,63 @@ runCompiler prog =
       (_, (_, locals), result) = runRWS (transProgram prog) () initState in
   (locals, result)
 
-compile :: String -> Program -> String
-compile className prog =
-  let (locals, result) = runCompiler prog
+isCalculation :: JVMInstruction -> Bool
+isCalculation ins = case ins of
+  Add -> True
+  Sub -> True
+  Mul -> True
+  Div -> True
+  PushConst _ -> True
+  Load _ -> True
+  _ -> False
+
+extractCalculations' :: JVMResult -> JVMResult -> (JVMResult, JVMResult)
+extractCalculations' acc suffix@(ins:rest) =
+  if isCalculation ins then
+    extractCalculations' (acc ++ [ins]) rest
+  else
+    (acc, suffix)
+
+extractCalculations :: JVMResult -> (JVMResult, JVMResult)
+extractCalculations = extractCalculations' []
+
+isPrint :: JVMInstruction -> Bool
+isPrint PrintInt = True
+isPrint _ = False
+
+optimizeGetPrintSwap' :: JVMResult -> JVMResult -> JVMResult
+optimizeGetPrintSwap' prefix [] = prefix
+optimizeGetPrintSwap' prefix rest@(GetPrintStream : ins) =
+  let (calc, suffix) = extractCalculations ins
+      oldPrefix = prefix ++ [GetPrintStream] in
+  if not $ isPrint $ head suffix then
+    optimizeGetPrintSwap' oldPrefix ins
+  else (
+    let oldResult = oldPrefix ++ ins
+        newPrefix = prefix ++ calc ++ [GetPrintStream, Swap]
+        newResult = newPrefix ++ suffix
+        oldStack = maxStack oldResult
+        newStack = maxStack newResult in
+    if newStack < oldStack then
+      optimizeGetPrintSwap' newPrefix suffix
+    else
+      optimizeGetPrintSwap' oldPrefix ins)
+optimizeGetPrintSwap' prefix (i:is) = optimizeGetPrintSwap' (prefix ++ [i]) is
+
+-- optimize by transformation:
+-- from: prefix ++ [GetPrintStream] ++ calculations ++ [PrintInt]
+-- to: prefix ++ calculations ++ [GetPrintStream, Swap, PrintInt]
+optimizeGetPrintSwap :: JVMResult -> JVMResult
+optimizeGetPrintSwap = optimizeGetPrintSwap' []
+
+optimize :: JVMResult -> JVMResult
+optimize ins =
+  optimizeGetPrintSwap ins
+
+compile :: Bool -> String -> Program -> String
+compile optimizeOn className prog =
+  let (locals, notOptimized) = runCompiler prog
+      result = if optimizeOn then optimize notOptimized else notOptimized
       code = foldr ((:) . show) [] result in
   indent (
     header className ++
