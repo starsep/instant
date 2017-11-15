@@ -2,7 +2,7 @@ module JVM (compile) where
 
 import AbsInstant
 import Control.Monad
-import Control.Monad.RWS (RWS, ask, get, local, tell, put, runRWS)
+import Control.Monad.Trans.RWS (RWS, ask, get, local, tell, put, runRWS)
 import Data.Map (Map, (!))
 import qualified Data.Map as Map
 

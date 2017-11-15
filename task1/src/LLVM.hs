@@ -3,7 +3,7 @@ module LLVM (compile) where
 import AbsInstant
 import Data.List (isPrefixOf)
 import Control.Monad
-import Control.Monad.RWS (RWS, get, tell, put, runRWS)
+import Control.Monad.Trans.RWS (RWS, get, tell, put, runRWS)
 import Data.Map (Map, (!))
 import qualified Data.Map as Map
 
