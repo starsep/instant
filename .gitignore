@@ -1,18 +1,16 @@
-# Ignore all
-* 
-
-# Unignore all with extensions
-!*.* 
-
-# Unignore all dirs
-!*/ 
-
-# Unignore Makefiles
-!Makefile
-
-# IntelliJ/PyCharm etc
-.idea
-
-*.class
-*.s
+*.tgz
+*.tar.gz
+*.x
+*.y
+out
 *.bc
+*.ll
+*.class
+*.j
+*.o
+*.hi
+build
+Compiler
+TestInstant
+dist
+testing
